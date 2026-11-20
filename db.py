@@ -5,7 +5,9 @@ import streamlit as st
 def _req(metodo, tabla, params=None, json=None, prefer="return=representation"):
     url = st.secrets["SUPABASE_URL"].rstrip("/") + "/rest/v1/" + tabla
     k = st.secrets["SUPABASE_KEY"]
-    h = {"apikey": k, "Authorization": "Bearer " + k, "Content-Type": "application/json", "Prefer": prefer}
+    h = {"apikey": k, "Content-Type": "application/json", "Prefer": prefer}
+    if k.startswith("eyJ"):  # clave antigua (JWT): también va como Authorization
+        h["Authorization"] = "Bearer " + k
     r = requests.request(metodo, url, headers=h, params=params, json=json, timeout=20)
     r.raise_for_status()
     return r.json() if r.text else []
