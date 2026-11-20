@@ -41,9 +41,13 @@ def enlace(p, v):
 
 
 # ---------- datos oficiales + correcciones ----------
-@st.cache_data(ttl=900, show_spinner=False)
 def bruto(dep, comp, cat, grp):
-    return [jdm.fila(p) for p in jdm.Cliente().partidos(dep, comp, cat, grp)]
+    out = []
+    for p in leer("partidos", grupo_id=grp):
+        d = dict(p["datos"])
+        d["fecha"] = datetime.fromisoformat(d["fecha"]) if d.get("fecha") else None
+        out.append(d)
+    return out
 
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -257,15 +261,14 @@ def vista_equipo(slug):
 
 
 # ---------- gestor / administrador ----------
-@st.cache_data(ttl=3600, show_spinner=False)
 def lista_comps(dep):
-    return jdm.Cliente().competiciones(dep, TEMP)
+    v = {c["competicion_id"]: c["competicion"] for c in leer("catalogo", deporte_id=dep)}
+    return [{"Id": k, "Nombre": n} for k, n in sorted(v.items(), key=lambda x: x[1])]
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
 def lista_grupos(dep, comp):
-    cli = jdm.Cliente()
-    return [{"id": g["Id"], "nombre": g["Nombre"], "cat": c["Id"]} for c in cli.categorias(comp) for g in cli.grupos(dep, comp, c["Id"])]
+    return [{"id": c["grupo_id"], "nombre": c["grupo"], "cat": c["categoria_id"]}
+            for c in leer("catalogo", deporte_id=dep, competicion_id=comp)]
 
 
 def gestor():
@@ -283,6 +286,11 @@ def gestor():
         return
     st.title("Gestión deportiva")
     st.caption(f"Sesión de {st.session_state.user}")
+    sync = leer("sync")
+    if sync:
+        st.caption(f"Datos oficiales sincronizados por última vez: {sync[0]['ultima'][:16].replace('T', ' ')} (hora UTC)")
+    else:
+        st.warning("Aún no se han sincronizado datos de la web oficial. Ejecuta sincronizar.py (ver instrucciones).")
     t1, t2, t3, t4 = st.tabs(["Equipos", "Jugadores", "Calendario y semáforo", "Aviso por WhatsApp"])
     equipos = {e["id"]: e for e in leer("equipos")}
     with t1:
@@ -355,5 +363,5 @@ try:
     else:
         gestor()
 except requests.RequestException as ex:
-    st.error("No se ha podido conectar con la base de datos o con la web oficial. Inténtalo en unos minutos.")
-    st.code(repr(ex)[:900])
+    st.error("No se ha podido conectar con la base de datos. Inténtalo en unos minutos.")
+    st.code(repr(ex)[:500])
