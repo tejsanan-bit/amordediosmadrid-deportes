@@ -356,4 +356,4 @@ try:
         gestor()
 except requests.RequestException as ex:
     st.error("No se ha podido conectar con la base de datos o con la web oficial. Inténtalo en unos minutos.")
-    st.caption(str(ex)[:200])
+        st.code(repr(ex)[:900])
